@@ -5,6 +5,21 @@
 # Output is into a file.
 # Future expansion is to present a graphical representation of the clusters.
 
-import sys
 from kmeans.cli import cli
+from kmeans.file import file
+from kmeans.algorithm import algorithm
 
+parameters = cli(parameters=['input', 'output'])
+
+print(parameters.getParameters())
+
+inputFile = file(path="data/input", name=parameters.getParameter('input'))
+print(f"Reading input file: {inputFile.fullPath}")
+inputData = inputFile.read()
+
+alg = algorithm(data=inputData)
+suggestedClusters = alg.suggestClusters()
+print(f"Suggested number of clusters: {suggestedClusters}")
+
+alg.processData()
+print(alg.getClusters())
