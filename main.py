@@ -22,8 +22,8 @@ suggestedClusters = alg.suggestClusters()
 print(f"Suggested number of clusters: {suggestedClusters}")
 
 alg.processData()
-print(alg.getRowFormatClusters())
+#print(alg.getRowFormatClusters())
 
 outputFile = file(path="data/output", name=parameters.getParameter('output'))
-outputFile.write(alg.getRowFormatClusters(),'csv','cluster,x,y')
+outputFile.write(alg.getRowFormatClusters(),True,'csv','cluster,x,y')
 
