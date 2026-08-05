@@ -8,6 +8,7 @@ class algorithm:
     dataY = []
     suggestedClusters = 0
     actualClusters = 0
+    rowFormatClusters = []
     clusters = []
     centroids = []
     minX = 0
@@ -117,9 +118,10 @@ class algorithm:
         return self.clusters
     def getClusters(self):
         return self.clusters
+    def getRowFormatClusters(self):
+        return self.rowFormatClusters
     def _findCentroid(self, centroids, pointX, pointY):
         # locates the closests centroid for given pointX & pointY
-
         closestCentroidIndex = -1
         greatestDiff = 9999999
 
@@ -150,6 +152,7 @@ class algorithm:
         thisCluster["points"].append(thisCoordinate)
     
         self.clusters[centroidIndex] = thisCluster
+        self.rowFormatClusters.append(f"{centroidIndex},{x},{y}")
     def _setCentroids(self):
         # Logic to initialize centroids based on suggestedClusters
         if self.actualClusters == 0:
@@ -157,7 +160,6 @@ class algorithm:
         
         spacingX = round(self.diffX / (self.actualClusters))
         spacingY = round(self.diffY / (self.actualClusters))
-
         xCentroids = []
         i = self.minX
         while i <= self.maxX:
