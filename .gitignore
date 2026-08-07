@@ -1,2 +1,2 @@
 /data*
-/kmeans/__pycache__/
+*.pyc
