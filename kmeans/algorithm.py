@@ -9,6 +9,7 @@ class algorithm:
     suggestedClusters = 0
     actualClusters = 0
     rowFormatClusters = []
+    listFormatClusters = []
     clusters = []
     centroids = []
     minX = 0
@@ -25,6 +26,7 @@ class algorithm:
         self.separateData()
 
     def separateData(self):
+        """Separates the raw data into X and Y coordinates, storing them in self.data, self.dataX, and self.dataY."""
         self.rawdata = [line.split('\t') for line in self.rawdata.strip().split('\n')]
         point = {}
         counter = 0
@@ -38,8 +40,7 @@ class algorithm:
             counter += 1
 
     def suggestClusters(self):
-        # Placeholder for logic to suggest number of clusters based on data
-        # For example, using the elbow method or silhouette score
+        """Suggests a number of clusters based on the range of X and Y coordinates in the data."""
         xSuggest = 0
         ySuggest = 0
 
@@ -99,7 +100,7 @@ class algorithm:
 
         return self.suggestedClusters
     def processData(self):
-        # This would involve initializing centroids, assigning points to clusters, and updating centroids iteratively
+        """This would involve initializing centroids, assigning points to clusters, and updating centroids iteratively"""
         self.actualClusters = self.suggestedClusters #forcing this right now as no handling for input clusters exists yet.
         if self.actualClusters == 0:
             raise ValueError("Number of clusters not suggested. Call suggestClusters() first.")
@@ -120,8 +121,10 @@ class algorithm:
         return self.clusters
     def getRowFormatClusters(self):
         return self.rowFormatClusters
+    def getListFormatClusters(self):
+        return self.listFormatClusters
     def _findCentroid(self, centroids, pointX, pointY):
-        # locates the closests centroid for given pointX & pointY
+        """ locates the closests centroid for given pointX & pointY"""
         closestCentroidIndex = -1
         greatestDiff = 9999999
 
@@ -136,7 +139,7 @@ class algorithm:
 
         return closestCentroidIndex
     def _initializeClusters(self):
-        # initiatlize the cluster if it doesn't exist
+        """ initiatlize the cluster if it doesn't exist"""
         for i in range(self.actualClusters):
             self.clusters.append({
                 "centroid": i,
@@ -144,7 +147,7 @@ class algorithm:
                 "points": []
             })
     def _updateClusters(self, centroidIndex, x, y):
-        # updates the specified cluster with the new x,y coordinates.
+        """ updates the specified cluster with the new x,y coordinates."""
         thisCluster = self.clusters[centroidIndex]
         if len(thisCluster["coordinates"]) == 0:
             thisCluster["coordinates"] = [self.centroids[centroidIndex][0], self.centroids[centroidIndex][1]]
@@ -153,8 +156,9 @@ class algorithm:
     
         self.clusters[centroidIndex] = thisCluster
         self.rowFormatClusters.append(f"{centroidIndex},{x},{y}")
+        self.listFormatClusters.append([centroidIndex,x,y])
     def _setCentroids(self):
-        # Logic to initialize centroids based on suggestedClusters
+        """Logic to initialize centroids based on suggestedClusters"""
         if self.actualClusters == 0:
             raise ValueError("Number of clusters not suggested. Call suggestClusters() first.")
         
