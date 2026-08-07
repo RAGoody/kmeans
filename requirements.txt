@@ -7,3 +7,6 @@ pytest>=7.3.0
 # Optional: Code formatting and linting (highly recommended)
 black>=23.3.0
 flake8>=6.0.0
+
+#visualizer
+matplotlib>=3.7.0
