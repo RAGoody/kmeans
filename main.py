@@ -10,17 +10,15 @@ from kmeans.file import file
 from kmeans.algorithm import algorithm
 
 import sys
-from visualizer.visualize import ClusterVisualizer
 
 parameters = cli(parameters=['input', 'output', 'method'])
-
 print(parameters.getParameters())
 
 inputFile = file(path="data/input", name=parameters.getParameter('input'))
 print(f"Reading input file: {inputFile.fullPath}")
 inputData = inputFile.read()
 
-alg = algorithm(data=inputData)
+alg = algorithm(data=inputData, display=True)
 suggestedClusters = alg.suggestClusters()
 print(f"Suggested number of clusters: {suggestedClusters}")
 
@@ -28,9 +26,3 @@ alg.processData(method=parameters.getParameter('method'))
 
 outputFile = file(path="data/output", name=parameters.getParameter('output'))
 outputFile.write(alg.getRowFormatClusters(),True,'csv','cluster,x,y')
-
-#print(alg.getListFormatClusters())
-
-print(f"Visualizing clusters....")
-visualizer = ClusterVisualizer(alg.getListFormatClusters())
-visualizer.show()
