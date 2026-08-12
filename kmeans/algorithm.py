@@ -2,6 +2,8 @@
 # then processes the data into clusters based upon the number of clusters suggested.
 import math
 import random
+import time
+from visualizer.visualize import ClusterVisualizer
 
 class algorithm:
     data = []
@@ -19,10 +21,12 @@ class algorithm:
     maxY = 0
     diffX = 0
     diffY = 0
+    verbose = True
 
-    def __init__(self, data):
+    def __init__(self, data, display=False):
         self.rawdata = data
         self.clusters = []
+        self.display = display
         print("Initializing algorithm with data...")
         self.separateData()
 
@@ -88,6 +92,19 @@ class algorithm:
                     lessThan10 = True
 
         return self.suggestedClusters
+    
+    def showPlot(self):
+        """Visualizes the clusters using the ClusterVisualizer."""
+        self.visualizer = ClusterVisualizer(self.listFormatClusters)
+        self.visualizer.show()
+
+    def updatePlot(self, data, title="K-Means Update"):
+        """Updates the visualization of the clusters using the ClusterVisualizer."""
+        if (self.verbose):
+            print(f"...Updating plot with new data...")
+
+        self.visualizer.update_view(data, title)
+
     def processData(self,method='minimumDistance'):
         """Processes the data into clusters based upon the specified method."""
         self.actualClusters = self.suggestedClusters #forcing this right now as no handling for input clusters exists yet.
@@ -99,6 +116,8 @@ class algorithm:
                 print("Processing data into clusters using minimum distance method...")
                 self._setCentroids() #this case utilizes the suggested centroids and does not iterate over them.
                 self.clusters = self._minimumDistance()
+                if (self.display):
+                    self.showPlot()
             case 'lloyds':
                 print("Processing data into clusters using Lloyd's method...")
                 self.clusters = self._lloyds()
@@ -118,31 +137,40 @@ class algorithm:
     
     def _lloyds(self):
         """This would involve initializing centroids, assigning points to clusters, and updating centroids iteratively"""
-        print("Starting Lloyd's algorithm for clustering...")
         oldClusters = []
         newClusters = []
         iterationMax=4
-        iteration = 0
+        iteration = 1
         self._setCentroidsAtRandom() #randomly select x,y coordinates for centroids within the min/max range of the data.
-        newClusters = self._minimumDistance() #take our first pass
+        print(f".....Processing iteration {iteration}")
+        oldClusters = self._minimumDistance() #take our first pass
 
-        #TODO: visualize first pass and pause.
-
+        if (self.display): #visualize first pass.
+            self.visualizer = ClusterVisualizer()
+            self.updatePlot(self.listFormatClusters, f"K-Means Update - Iteration {iteration}")  # Update visualization
+            time.sleep(5)
 
         while self._detectChanges(oldClusters, newClusters):
             # Logic to update centroids and reassign points to clusters
-            newClusters = self._minimumDistance()  # Reassign points to clusters based on new centroids
-            if self._detectChanges(oldClusters, newClusters):
-                oldClusters = newClusters
-                self.centroids = self._moveCentroids(oldClusters)  # Update centroids based on new clusters
-
             iteration += 1
             if iteration >= iterationMax:
                 print("Maximum iterations reached. Stopping Lloyd's algorithm.")
                 break
+        
+            print(f".....Processing iteration {iteration}")
+            self.centroids = self._moveCentroids(oldClusters)  # Update centroids based on new clusters
+            newClusters = self._minimumDistance()  # Reassign points to clusters based on new centroids
+            if (self.display):
+                self.updatePlot(self.listFormatClusters, f"K-Means Update - Iteration {iteration}")  # Update visualization
+                time.sleep(5)
+
+            oldClusters = newClusters
 
         print("Lloyd's algorithm completed in ", iteration, "iterations.")
         self.clusters = newClusters
+        if (self.display):
+            self.visualizer.show() # display the final clusters after Lloyd's algorithm completes
+
         return self.clusters
     
     def _moveCentroids(self, clusters):
@@ -151,6 +179,7 @@ class algorithm:
         newCentroids = []
         print("Current centroids:", self.centroids)
         for i, cluster in enumerate(clusters):
+            print(f"Processing cluster {i} with {len(cluster['points'])} points.")
             if cluster["points"]:
                 sumX = sum(point[0] for point in cluster["points"])
                 sumY = sum(point[1] for point in cluster["points"])
@@ -158,8 +187,6 @@ class algorithm:
                 newCentroidX = sumX / count
                 newCentroidY = sumY / count
                 newCentroids.append((newCentroidX, newCentroidY))
-            else:
-                newCentroids.append(self.centroids[i]) # If a cluster has no points, keep the old centroid
             
         print("Updated centroids:", newCentroids)
         return newCentroids
@@ -196,7 +223,7 @@ class algorithm:
             #print(f"    Point ({pointX}, {pointY}) assigned to centroid index {centroidIndex} at {self.centroids[centroidIndex]}")
             self._updateClusters(centroidIndex, pointX, pointY)
 
-        print("Completed processing data into clusters.")
+        print("...Completed processing data into clusters.")
         return self.clusters
 
     def _findCentroid(self, centroids, pointX, pointY):
