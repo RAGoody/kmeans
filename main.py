@@ -19,8 +19,8 @@ print(f"Reading input file: {inputFile.fullPath}")
 inputData = inputFile.read()
 
 alg = algorithm(data=inputData, display=True)
-suggestedClusters = alg.suggestClusters()
-print(f"Suggested number of clusters: {suggestedClusters}")
+suggestedClusterCount = alg.suggestClusterCount()
+print(f"Suggested number of clusters: {suggestedClusterCount}")
 
 alg.processData(method=parameters.getParameter('method'))
 

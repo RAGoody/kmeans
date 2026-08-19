@@ -9,8 +9,8 @@ class algorithm:
     data = []
     dataX = []
     dataY = []
-    suggestedClusters = 0
-    actualClusters = 0
+    suggestedClusterCount = 0
+    actualClusterCount = 0
     rowFormatClusters = []
     listFormatClusters = []
     clusters = []
@@ -22,6 +22,7 @@ class algorithm:
     diffX = 0
     diffY = 0
     verbose = True
+    targetMaxClusterCount = 6
 
     def __init__(self, data, display=False):
         self.rawdata = data
@@ -46,13 +47,10 @@ class algorithm:
 
         self._setMinMaxDiffXY()
 
-    def suggestClusters(self):
+    def suggestClusterCount(self):
         """Suggests a number of clusters based on the range of X and Y coordinates in the data, attempting to find mid-points for even distribution."""
         xSuggest = 0
         ySuggest = 0
-
-        xCentroids = [] #parallel to yCentroids, these are the suggested centroids for the X axis
-        yCentroids = [] #paralell to xCentroids, these are the suggested centroids for the Y axis
 
         orderMagX = math.floor(math.log10(abs(self.diffX))) if self.diffX != 0 else 0
         orderMagY = math.floor(math.log10(abs(self.diffY))) if self.diffY != 0 else 0
@@ -79,20 +77,21 @@ class algorithm:
         if (xSuggest != ySuggest):
             xyDiff = abs(xSuggest - ySuggest)
             xyDiff = round(math.log10(xyDiff))
-            self.suggestClusters = xyFloor + xyDiff
+            self.suggestedClusterCount = xyFloor + xyDiff
         else :
-            self.suggestedClusters = xSuggest
+            self.suggestedClusterCount = xSuggest
 
         #level two reduction of cluster count.
-        if (self.suggestedClusters > 10):
+        targetMaxClusterCount = 6
+        if (self.suggestedClusterCount > targetMaxClusterCount):
             lessThan10 = False
             while (lessThan10 == False):
-                self.suggestedClusters = round(self.suggestedClusters / 2)
-                if (self.suggestedClusters <= 10):
+                self.suggestedClusterCount = round(self.suggestedClusterCount / 2)
+                if (self.suggestedClusterCount <= targetMaxClusterCount):
                     lessThan10 = True
 
-        return self.suggestedClusters
-    
+        return self.suggestedClusterCount
+
     def showPlot(self):
         """Visualizes the clusters using the ClusterVisualizer."""
         self.visualizer = ClusterVisualizer(self.listFormatClusters)
@@ -107,14 +106,14 @@ class algorithm:
 
     def processData(self,method='minimumDistance'):
         """Processes the data into clusters based upon the specified method."""
-        self.actualClusters = self.suggestedClusters #forcing this right now as no handling for input clusters exists yet.
-        if self.actualClusters == 0:
-           raise ValueError("Number of clusters not suggested. Call suggestClusters() first.")
+        self.actualClusterCount = self.suggestedClusterCount #forcing this right now as no handling for input clusters exists yet.
+        if self.actualClusterCount == 0:
+           raise ValueError("Number of clusters not suggested. Call suggestClusterCount() first.")
         self._initializeClusters()
         match method:
             case 'minimumDistance':
                 print("Processing data into clusters using minimum distance method...")
-                self._setCentroids() #this case utilizes the suggested centroids and does not iterate over them.
+                self._setCentroids(self.actualClusterCount) #this case utilizes the suggested centroids and does not iterate over them.
                 self.clusters = self._minimumDistance()
                 if (self.display):
                     self.showPlot()
@@ -126,6 +125,14 @@ class algorithm:
                 self.clusters = self._minimumDistance()
         return self.clusters
 
+    def getCentroids(self):
+        return self.centroids
+
+    def setClusterCount(self, count):
+        self.actualClusterCount = count
+        self._initializeClusters()
+        return self.actualClusterCount
+
     def getClusters(self):
         return self.clusters
     
@@ -134,6 +141,16 @@ class algorithm:
     
     def getListFormatClusters(self):
         return self.listFormatClusters
+
+    def getSuggestedClusters(self):
+        return self.suggestedClusters
+
+    def getTargetMaxClusterCount(self):
+        return self.targetMaxClusterCount
+
+    def setTargetMaxClusterCount(self, count):
+        self.targetMaxClusterCount = count
+        return self.targetMaxClusterCount
     
     def _lloyds(self):
         """This would involve initializing centroids, assigning points to clusters, and updating centroids iteratively"""
@@ -156,15 +173,16 @@ class algorithm:
             if iteration >= iterationMax:
                 print("Maximum iterations reached. Stopping Lloyd's algorithm.")
                 break
-        
+
+            if (iteration > 1):
+                oldClusters = newClusters
+
             print(f".....Processing iteration {iteration}")
-            self.centroids = self._moveCentroids(oldClusters)  # Update centroids based on new clusters
+            self._moveCentroids()  # Update centroids based on new clusters
             newClusters = self._minimumDistance()  # Reassign points to clusters based on new centroids
             if (self.display):
                 self.updatePlot(self.listFormatClusters, f"K-Means Update - Iteration {iteration}")  # Update visualization
                 time.sleep(5)
-
-            oldClusters = newClusters
 
         print("Lloyd's algorithm completed in ", iteration, "iterations.")
         self.clusters = newClusters
@@ -173,30 +191,6 @@ class algorithm:
 
         return self.clusters
     
-    def _moveCentroids(self, clusters):
-        """Updates centroids based on the mean of the points assigned to each cluster."""
-        print("Updating centroids based on current cluster assignments...")
-        newCentroids = []
-        print("Current centroids:", self.centroids)
-        for i, cluster in enumerate(clusters):
-            print(f"Processing cluster {i} with {len(cluster['points'])} points.")
-            if cluster["points"]:
-                sumX = sum(point[0] for point in cluster["points"])
-                sumY = sum(point[1] for point in cluster["points"])
-                count = len(cluster["points"])
-                newCentroidX = sumX / count
-                newCentroidY = sumY / count
-                newCentroids.append((newCentroidX, newCentroidY))
-            
-        print("Updated centroids:", newCentroids)
-        return newCentroids
-
-    def _setCentroidsAtRandom(self):
-        """This would involve randomly assigning points to clusters and then updating centroids iteratively"""
-        self.centroids = [] #reset this for each iteration
-        for i in range(self.suggestedClusters):
-            self.centroids.append((random.uniform(self.minX,self.maxX), random.uniform(self.minY,self.maxY)))
-
     def _detectChanges(self, oldClusters, newClusters):
         """Compares old and new clusters to detect changes in point assignments."""
         changesDetected = False
@@ -213,37 +207,22 @@ class algorithm:
         return changesDetected
     
     def _minimumDistance(self):
-        """This would involve initializing centroids, assigning points to clusters based on pure minimum sum of distance from a point's X,Y separation from a centroid X,Y."""
+        """Assigns points to clusters based on pure minimum sum of distance from a point's X,Y separation from a centroid X,Y."""
         rowCount = len(self.data)
         for i in range(rowCount):
             pointX = self.dataX[i]
             pointY = self.dataY[i]
             #print(f"for point {pointX}, {pointY} finding closest centroid...")
-            centroidIndex = self._findCentroid(self.centroids, pointX, pointY)
+            centroidIndex = self._findCentroid(pointX, pointY)
             #print(f"    Point ({pointX}, {pointY}) assigned to centroid index {centroidIndex} at {self.centroids[centroidIndex]}")
             self._updateClusters(centroidIndex, pointX, pointY)
 
         print("...Completed processing data into clusters.")
         return self.clusters
 
-    def _findCentroid(self, centroids, pointX, pointY):
-        """ locates the closests centroid for given pointX & pointY"""
-        closestCentroidIndex = -1
-        greatestDiff = 9999999
-        for i in range(len(centroids)):
-            centroidX, centroidY = centroids[i]
-            diffX = abs(pointX - centroidX)
-            diffY = abs(pointY - centroidY)
-            diffTotal = diffX + diffY
-            #print(f"        difference from centroid {i}: {centroidX}, {centroidY} = {diffTotal}")
-            if (diffTotal < greatestDiff):
-                greatestDiff = diffTotal
-                closestCentroidIndex = i
-
-        return closestCentroidIndex
     def _initializeClusters(self):
         """ initiatlize the cluster if it doesn't exist"""
-        for i in range(self.actualClusters):
+        for i in range(self.actualClusterCount):
             self.clusters.append({
                 "centroid": i,
                 "coordinates": [],
@@ -254,21 +233,22 @@ class algorithm:
         """ updates the specified cluster with the new x,y coordinates."""
         thisCluster = self.clusters[centroidIndex]
         if len(thisCluster["coordinates"]) == 0:
-            thisCluster["coordinates"] = [self.centroids[centroidIndex][0], self.centroids[centroidIndex][1]]
+            thisCluster["coordinates"] = self.getCentroidCoordinates(centroidIndex)
+
         thisCoordinate = [x, y]
         thisCluster["points"].append(thisCoordinate)
-    
+        self.addPointToCentroidNode(centroidIndex, x, y)
         self.clusters[centroidIndex] = thisCluster
         self.rowFormatClusters.append(f"{centroidIndex},{x},{y}")
         self.listFormatClusters.append([centroidIndex,x,y])
 
-    def _setCentroids(self):
+    def _setCentroids(self, count):
         """Logic to initialize centroids based on suggestedClusters"""
-        if self.actualClusters == 0:
-            raise ValueError("Number of clusters not suggested. Call suggestClusters() first.")
+        if count == 0:
+            raise ValueError("Number of clusters not suggested. Call suggestClusterCount() first.")
         
-        spacingX = round(self.diffX / (self.actualClusters))
-        spacingY = round(self.diffY / (self.actualClusters))
+        spacingX = round(self.diffX / (count))
+        spacingY = round(self.diffY / (count))
         xCentroids = []
         i = self.minX
         while i <= self.maxX:
@@ -292,12 +272,111 @@ class algorithm:
             i += spacingY
 
         i = 0
-        for i in range(self.actualClusters):
-            self.centroids.append((xCentroids[i], yCentroids[i]))
+        for i in range(count):
+            #self.centroids.append(self._createCentroidNode(xCentroids[i], yCentroids[i]))
+            self._createCentroidNode(xCentroids[i], yCentroids[i])
 
         print("Identified evenly spaced centroids:",self.centroids)
         return self.centroids
     
+    def _setCentroidsAtRandom(self):
+        """This would involve randomly assigning points to clusters and then updating centroids iteratively"""
+        self.centroids = [] #reset this for each iteration
+        for i in range(self.actualClusterCount):
+            #self.centroids.append((random.uniform(self.minX,self.maxX), random.uniform(self.minY,self.maxY)))
+            self._createCentroidNode(random.uniform(self.minX,self.maxX), random.uniform(self.minY,self.maxY))
+
+    def _moveCentroids(self):
+        """Updates centroids based on the mean of the points assigned to each cluster."""
+        if (self.verbose):
+            print("Updating centroids based on current cluster assignments...")
+            print("     Current centroids:", self.centroids)
+
+        iteration = 0
+        for thisCentroid in self.centroids:
+            points = thisCentroid["points"]
+            if points:
+                meanX = sum(point[0] for point in points) / len(points)
+                meanY = sum(point[1] for point in points) / len(points)
+                self.updateCentroidNode(iteration, meanX, meanY)
+
+            iteration += 1
+
+        if (self.verbose): 
+            print("     Updated centroids:", self.getCentroids())
+        return self.getCentroids()
+
+    def _createCentroidNode(self, centroidX, centroidY):
+        """Creates a centroid node with the given X and Y coordinates."""
+        if (self.verbose):
+            print(f"Creating centroid node at ({centroidX}, {centroidY})...")
+
+        if (self.getCentroidIndexByCoordinates(centroidX, centroidY) != False):
+            if (self.verbose):
+                print(f"Centroid at ({centroidX}, {centroidY}) already exists. Not creating a duplicate.")
+            return self.getCentroidIndexByCoordinates(centroidX, centroidY)  # Return the index of the existing centroid
+        
+        thisCentroid = dict()
+        thisCentroid["coordinates"] = (centroidX, centroidY)
+        thisCentroid["points"] = []
+        thisCentroid["centroid"] = len(self.centroids)
+
+        self.centroids.append(thisCentroid)
+        if (self.verbose):
+            print(f"Created new centroid node at ({centroidX}, {centroidY}) with index {thisCentroid['centroid']}.")
+        return thisCentroid
+
+    def getCentroidNode(self, centroidIndex):
+        """Returns the centroid node for the specified index."""
+        if centroidIndex < 0 or centroidIndex >= len(self.centroids):
+            raise IndexError("Centroid index out of range.")
+        return self.centroids[centroidIndex]
+
+    def getCentroidCoordinates(self,centroidIndex):
+        """Returns the coordinates of the centroid for a given index"""
+        return self.getCentroidNode(centroidIndex)["coordinates"]
+
+    def getCentroidIndexByCoordinates(self, centroidX, centroidY):
+        """Returns the index of the centroid node with the specified X and Y coordinates."""
+        for i, centroid in enumerate(self.centroids):
+            if centroid["coordinates"] == (centroidX, centroidY):
+                return i
+        return False
+    
+    def updateCentroidNode(self, centroidIndex, newX, newY):
+        """Updates the centroid node at the specified index with new X and Y coordinates."""
+        if centroidIndex < 0 or centroidIndex >= len(self.centroids):
+            raise IndexError("Centroid index out of range.")
+        self.centroids[centroidIndex]["coordinates"] = (newX, newY)
+
+    def addPointToCentroidNode(self, centroidIndex, pointX, pointY):
+        """Adds a point to the centroid node at the specified index."""
+        if centroidIndex < 0 or centroidIndex >= len(self.centroids):
+            raise IndexError("Centroid index out of range.")
+        self.centroids[centroidIndex]["points"].append((pointX, pointY))
+
+    def clearPointsFromCentroidNode(self, centroidIndex):
+        """Clears all points from the centroid node at the specified index."""
+        if centroidIndex < 0 or centroidIndex >= len(self.centroids):
+            raise IndexError("Centroid index out of range.")
+        self.centroids[centroidIndex]["points"] = []
+
+    def _findCentroid(self, pointX, pointY):
+        """ locates the closests centroid for given pointX & pointY"""
+        closestCentroidIndex = -1
+        greatestDiff = 9999999
+        for i in range(len(self.centroids)):
+            centroidX, centroidY = self.getCentroidNode(i)["coordinates"]
+            diffX = abs(pointX - centroidX)
+            diffY = abs(pointY - centroidY)
+            diffTotal = diffX + diffY
+            #print(f"        difference from centroid {i}: {centroidX}, {centroidY} = {diffTotal}")
+            if (diffTotal < greatestDiff):
+                greatestDiff = diffTotal
+                closestCentroidIndex = i
+
+        return closestCentroidIndex
+
     def _setMinMaxDiffXY(self):
         """Calculates the minimum, maximum, and difference for X and Y coordinates."""
         self.minX = min(self.dataX)
